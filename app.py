@@ -1,5 +1,3 @@
-import os
-import time
 import pandas as pd
 import PyPDF2
 import streamlit as st
@@ -19,7 +17,7 @@ from langchain.chat_models import ChatOpenAI
 im = Image.open('./images/icon.jpeg')
 
 # Set Main configuration of page (title, icon etc.)
-st.set_page_config(layout="wide", page_title = 'AI PaperPal', page_icon=im )
+st.set_page_config(layout="wide", page_title='AI PaperPal', page_icon=im)
 
 
 hide_default_format = """
@@ -30,13 +28,15 @@ hide_default_format = """
        """
 
 st.markdown(hide_default_format, unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center; color: Gray;'> AI PaperPal : Your Document's All-Knowing Assistant</h2>", unsafe_allow_html=True)
+st.markdown(
+    "<h2 style='text-align: center; color: Gray;'> AI PaperPal : Your Document's All-Knowing Assistant</h2>",
+    unsafe_allow_html=True)
 st.text("")
 st.text("")
 
 load_dotenv()
 
-# @st.cache_data(allow_output_mutation=True)
+
 @st.cache_data()
 def extract_text_from_pdfs(pdf_files):
     # Create an empty data frame
@@ -61,12 +61,14 @@ def extract_text_from_pdfs(pdf_files):
                 # Add the page text to the overall text
                 text += page_text
             # Add the file name and the text to the data frame
-            df = df.append({"file": pdf_file.name, "text": text}, ignore_index=True)
+            df = df.append(
+                {"file": pdf_file.name, "text": text}, ignore_index=True)
     # Return the data frame
     return df
 
+
 # For Alignment
-col1, col2, col3 = st.columns([1,1,1])
+col1, col2, col3 = st.columns([1, 1, 1])
 
 # Read API Key for all users
 openai_key = col1.text_input("Enter your OPENAI API Key : ", type="password")
@@ -74,10 +76,12 @@ openai_key = col1.text_input("Enter your OPENAI API Key : ", type="password")
 
 if openai_key != "":
 
-    # Upload the required document 
+    # Upload the required document
     pdf_files = col3.file_uploader(
-        "Upload the document (**PDF**) you need help with:", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed"
-    )
+        "Upload the document (**PDF**) you need help with:",
+        type=["pdf"],
+        accept_multiple_files=True,
+        label_visibility="collapsed")
 
     persist_directory = 'db'
 
@@ -86,22 +90,27 @@ if openai_key != "":
         with st.spinner("Processing PDF ..."):
             # Convert to text file and save
             df = extract_text_from_pdfs(pdf_files)
-            filename = "document" + time.strftime("%Y%m%d-%H%M%S")
-            file_path = os.path.join('./docs', filename+".txt")
-            with open(file_path, 'w') as file:
-                file.write(df['text'][0])
-            text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-            loader = UnstructuredFileLoader(file_path)
-            documents = loader.load()
-            split_texts = text_splitter.split_documents(documents)
 
-            # Get Embeddings from Open AI          
-            embeddings = OpenAIEmbeddings(openai_api_key=openai_key)           
-            vector_db = Chroma.from_documents(documents=split_texts, embeddings=embeddings, persist_directory=persist_directory)
-            
+            text_splitter = CharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=0)
+            split_texts = text_splitter.split_text(df['text'][0])
+
+            # Get Embeddings from Open AI
+            embeddings = OpenAIEmbeddings(openai_api_key=openai_key)
+            vector_db = Chroma.from_texts(
+                texts=split_texts,
+                embeddings=embeddings,
+                persist_directory=persist_directory)
+
             # Get Chat Model from Open AI
-            chat_model = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.2, openai_api_key=openai_key)
-            qa = RetrievalQA.from_chain_type(llm=chat_model, chain_type="stuff", retriever=vector_db.as_retriever())
+            chat_model = ChatOpenAI(
+                model_name="gpt-3.5-turbo",
+                temperature=0.2,
+                openai_api_key=openai_key)
+            qa = RetrievalQA.from_chain_type(
+                llm=chat_model,
+                chain_type="stuff",
+                retriever=vector_db.as_retriever())
 
         # Create a chat interface
         prompt = st.chat_input("Enter your questions here...")
@@ -112,4 +121,3 @@ if openai_key != "":
                 bot_response = qa.run(prompt)
                 # bot_response = "Gotcha!"
                 st.write(bot_response)
-

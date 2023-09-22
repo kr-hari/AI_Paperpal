@@ -1,5 +1,5 @@
 .DS_Store
 deepset/
-docs/
-db/
-data/
+docs/*
+db/*
+data/*

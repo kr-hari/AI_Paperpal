@@ -14,6 +14,8 @@ from io import BytesIO
 import os
 import sys
 import time
+
+import base64
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -24,7 +26,30 @@ from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain.chat_models import ChatOpenAI
 
-st.title("Question-Answering Webapp")
+
+
+
+from PIL import Image
+# Loading Image using PIL
+im = Image.open('./images/icon.jpeg')
+
+st.set_page_config(layout="wide", page_title = 'AI PaperPal', page_icon=im )
+
+hide_default_format = """
+       <style>
+       #MainMenu {visibility: hidden; }
+       footer {visibility: hidden;}
+       </style>
+       """
+
+st.markdown(hide_default_format, unsafe_allow_html=True)
+# st.title("AI PaperPal : Your Document's All-Knowing Assistant :sunglasses:")
+# st.markdown()
+st.markdown("<h2 style='text-align: center; color: Gray;'> AI PaperPal : Your Document's All-Knowing Assistant</h2>", unsafe_allow_html=True)
+# st.markdown("<h5 style='text-align: center; '>Your personal document assistant. Upload your document and ask any question you want answer to : </h5>", unsafe_allow_html=True)
+st.text("")
+st.text("")
+
 
 load_dotenv()
 
@@ -33,7 +58,8 @@ load_dotenv()
 
 
 
-@st.cache(allow_output_mutation=True)
+# @st.cache_data(allow_output_mutation=True)
+@st.cache_data()
 def extract_text_from_pdfs(pdf_files):
     # Create an empty data frame
     df = pd.DataFrame(columns=["file", "text"])
@@ -107,49 +133,15 @@ def extract_text_from_pdfs(pdf_files):
 #     context = "".join(texts)
 #     return context
 
-
-# @st.cache(allow_output_mutation=True)
-# def get_pipeline():
-#     modelname = "deepset/bert-base-cased-squad2"
-#     model_qa = BertForQuestionAnswering.from_pretrained(modelname)
-#     # model_qa.save_pretrained(modelname)
-#     tokenizer = AutoTokenizer.from_pretrained("tokenizer-deepset")
-#     # tokenizer.save_pretrained("tokenizer-" + modelname)
-#     qa = pipeline("question-answering", model=model_qa, tokenizer=tokenizer)
-#     return qa
+col1, col2, col3 = st.columns([1,1,1])
 
 
-# def answer_question(pipeline, question: str, context: str) -> Dict:
-#     input = {"question": question, "context": context}
-#     return pipeline(input)
-
-
-# @st.cache(allow_output_mutation=True)
-# def create_context(df):
-#     # path = "data/"
-#     # files = Path(path).glob("WHR+22.pdf")
-#     # df = extract_text_from_pdfs(files)
-#     df["sentences"] = df["text"].apply(
-#         lambda long_str: long_str.replace("\n", " ").split(".")
-#     )
-#     df = remove_short_sentences(df)
-
-#     context = get_relevant_texts(df, topic)
-#     return context
-
-
-@st.cache(allow_output_mutation=True)
-def start_app():
-    with st.spinner("Loading model. Please hold..."):
-        pipeline = get_pipeline()
-    return pipeline
-
-openai_key = st.text_input("Enter your OPENAI API Key : ", type="password")
+openai_key = col1.text_input("Enter your OPENAI API Key : ", type="password")
 
 if openai_key != "":
 
-    pdf_files = st.file_uploader(
-        "Upload pdf files", type=["pdf"], accept_multiple_files=True
+    pdf_files = col3.file_uploader(
+        "Upload the document (**PDF**) you need help with:", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed"
     )
 
     persist_directory = 'db'
@@ -158,6 +150,10 @@ if openai_key != "":
     if pdf_files:
         with st.spinner("Processing PDF ..."):
             # Convert to text file and save
+
+            # base64_pdf = base64.b64encode(pdf_files[0]).decode('utf-8')
+            # pdf_display = F'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
+            # st.markdown(pdf_display, unsafe_allow_html=True)
             df = extract_text_from_pdfs(pdf_files)
             filename = "document" + time.strftime("%Y%m%d-%H%M%S")
             file_path = os.path.join('./docs', filename+".txt")
@@ -174,9 +170,20 @@ if openai_key != "":
             chat_model = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0.2, openai_api_key=openai_key)
             qa = RetrievalQA.from_chain_type(llm=chat_model, chain_type="stuff", retriever=vector_db.as_retriever())
 
-        user_input = st.text_input("Enter your questions here...")
+        # pdf_display = F'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
 
-        if user_input != "":
-            with st.spinner("Be right back..."):
-                bot_response = qa.run(user_input)
-            st.write(bot_response)
+        prompt = st.chat_input("Enter your questions here...")
+        if prompt:
+            st.write(f"Question : {prompt}")
+
+            with st.chat_message("AI"):
+                # bot_response = qa.run(user_input)
+                bot_response = "Gotcha!"
+                st.write(bot_response)
+                # st.line_chart(np.random.randn(30, 3))
+        # user_input = st.text_input("Enter your questions here...")
+
+        # if user_input != "":
+        #     with st.spinner("Be right back..."):
+        #         bot_response = qa.run(user_input)
+        #     st.write(bot_response)

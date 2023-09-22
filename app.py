@@ -37,7 +37,7 @@ st.text("")
 load_dotenv()
 
 
-@st.cache_data()
+# @st.cache_data()
 def extract_text_from_pdfs(pdf_files):
     # Create an empty data frame
     df = pd.DataFrame(columns=["file", "text"])
@@ -83,7 +83,7 @@ if openai_key != "":
         accept_multiple_files=True,
         label_visibility="collapsed")
 
-    persist_directory = 'db'
+    # persist_directory = 'db'
 
     # Once file is uploaded, start processing
     if pdf_files:
@@ -99,8 +99,7 @@ if openai_key != "":
             embeddings = OpenAIEmbeddings(openai_api_key=openai_key)
             vector_db = Chroma.from_texts(
                 texts=split_texts,
-                embeddings=embeddings,
-                persist_directory=persist_directory)
+                embeddings=embeddings)
 
             # Get Chat Model from Open AI
             chat_model = ChatOpenAI(
@@ -110,7 +109,7 @@ if openai_key != "":
             qa = RetrievalQA.from_chain_type(
                 llm=chat_model,
                 chain_type="stuff",
-                retriever=vector_db.as_retriever())
+                retriever=vector_db.as_retriever(search_kwargs={"k": 1}))
 
         # Create a chat interface
         prompt = st.chat_input("Enter your questions here...")

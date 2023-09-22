@@ -1,2 +1,5 @@
 .DS_Store
 deepset/
+docs/
+db/
+data/
